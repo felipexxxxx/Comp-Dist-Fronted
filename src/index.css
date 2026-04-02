@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  --bg: #fffdf9;
+  --panel: #ffffff;
+  --panel-soft: #fff7ee;
+  --text: #212121;
+  --muted: #5c2f12;
+  --border: #e7d8c8;
+  --accent: #e98936;
+  --accent-strong: #b85600;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #17110d;
+  --panel: #241913;
+  --panel-soft: #2b1d16;
+  --text: #fff7f0;
+  --muted: #e1b68c;
+  --border: #4b3327;
+  --accent: #e4a87b;
+  --accent-strong: #e98936;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(233, 137, 54, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(184, 86, 0, 0.1), transparent 22%),
+    linear-gradient(180deg, #fffaf3 0%, #fffdf9 55%, #fff7ee 100%);
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
