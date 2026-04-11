@@ -87,6 +87,26 @@ async function requestJson<T>(baseUrl: string, path: string, init?: RequestInit)
   return (await response.json()) as T;
 }
 
+async function requestWithoutBody(baseUrl: string, path: string, init?: RequestInit): Promise<void> {
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+  const session = readSession();
+  const headers = new Headers(init?.headers ?? {});
+
+  if (session?.token) {
+    headers.set('Authorization', `${session.tokenType} ${session.token}`);
+  }
+
+  const response = await fetch(`${normalizedBaseUrl}${path}`, {
+    headers,
+    ...init
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed with ${response.status}`);
+  }
+}
+
 export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
   const login = async (input: LoginInput): Promise<AuthSession> => {
     const session = await requestJson<BackendAuthSession>(baseUrl, '/api/auth/login', {
@@ -118,6 +138,12 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
 
     login(input: LoginInput) {
       return login(input);
+    },
+
+    logout() {
+      return requestWithoutBody(baseUrl, '/api/auth/logout', {
+        method: 'POST'
+      });
     },
 
     async getDashboardSummary() {

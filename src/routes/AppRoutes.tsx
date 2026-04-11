@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuthContext } from '../contexts/AuthContext';
@@ -63,11 +63,16 @@ function PublicOnly() {
 
 function ShellLayout() {
   const { theme, toggleTheme } = useThemeContext();
-  const { signOut, userName } = useAuthContext();
+  const { signOut, userName, userRole } = useAuthContext();
   const location = useLocation();
   const navigate = useNavigate();
 
   const routeMeta = routeTitles[location.pathname] ?? routeTitles['/dashboard'];
+  const navItems = [
+    { key: '/dashboard', label: 'Dashboard' },
+    ...(userRole === 'ADMIN' ? [{ key: '/users', label: 'Usuarios' }] : []),
+    { key: '/patients', label: 'Pacientes' }
+  ];
 
   useEffect(() => {
     if (location.pathname === '/') {
@@ -79,8 +84,9 @@ function ShellLayout() {
     <AppShell
       apiModeLabel="API web configuravel"
       currentRoute={location.pathname}
-      onLogout={() => {
-        signOut();
+      navItems={navItems}
+      onLogout={async () => {
+        await signOut();
         navigate('/login', { replace: true });
       }}
       onNavigate={(route) => navigate(route)}
@@ -96,6 +102,16 @@ function ShellLayout() {
   );
 }
 
+function RequireAdmin({ children }: { children: ReactElement }) {
+  const { userRole } = useAuthContext();
+
+  if (userRole !== 'ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -107,7 +123,14 @@ export function AppRoutes() {
         <Route element={<ShellLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardScreen />} />
-          <Route path="/users" element={<UsersScreen />} />
+          <Route
+            path="/users"
+            element={
+              <RequireAdmin>
+                <UsersScreen />
+              </RequireAdmin>
+            }
+          />
           <Route path="/patients" element={<PatientsScreen />} />
         </Route>
       </Route>

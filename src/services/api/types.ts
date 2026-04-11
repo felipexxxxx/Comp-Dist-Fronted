@@ -63,6 +63,7 @@ export type HealthSysApi = {
   mode: 'mock' | 'http';
   baseUrl: string;
   login(input: LoginInput): Promise<AuthSession>;
+  logout(): Promise<void>;
   getDashboardSummary(): Promise<DashboardSummary>;
   listUsers(): Promise<UserRecord[]>;
   createUser(input: CreateUserInput): Promise<UserRecord>;

@@ -138,6 +138,10 @@ export function createMockHealthSysApi(): HealthSysApi {
       return buildSession(stripPassword(matchedUser));
     },
 
+    async logout() {
+      return undefined;
+    },
+
     async getDashboardSummary(): Promise<DashboardSummary> {
       const users = seedUsers();
       const patients = seedPatients();

@@ -2,15 +2,16 @@ import { createContext, useContext, useEffect, useMemo, useState, type PropsWith
 
 import { apiClient } from '../services/api/client';
 import { persistSession, readSession } from '../services/api/session';
-import type { AuthSession, LoginInput } from '../services/api/types';
+import type { AuthSession, LoginInput, UserRole } from '../services/api/types';
 
 type AuthContextValue = {
   session: AuthSession | null;
   userName: string;
+  userRole: UserRole | null;
   isAuthenticated: boolean;
   isBootstrapping: boolean;
   signIn: (input: LoginInput) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       session,
       userName: session?.user.name ?? 'Guest',
+      userRole: session?.user.role ?? null,
       isAuthenticated: Boolean(session),
       isBootstrapping,
       signIn: async (input: LoginInput) => {
@@ -35,9 +37,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setSession(nextSession);
         persistSession(nextSession);
       },
-      signOut: () => {
-        setSession(null);
-        persistSession(null);
+      signOut: async () => {
+        try {
+          if (session) {
+            await apiClient.logout();
+          }
+        } finally {
+          setSession(null);
+          persistSession(null);
+        }
       }
     }),
     [isBootstrapping, session]

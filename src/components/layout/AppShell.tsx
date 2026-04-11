@@ -10,17 +10,12 @@ type AppShellProps = PropsWithChildren<{
   userName: string;
   apiModeLabel: string;
   isMock: boolean;
+  navItems: Array<{ key: string; label: string }>;
   onNavigate: (route: string) => void;
-  onLogout: () => void;
+  onLogout: () => Promise<void> | void;
   onToggleTheme: () => void;
   theme: 'light' | 'dark';
 }>;
-
-const navItems = [
-  { key: '/dashboard', label: 'Dashboard' },
-  { key: '/users', label: 'Usuarios' },
-  { key: '/patients', label: 'Pacientes' }
-];
 
 export function AppShell({
   children,
@@ -30,6 +25,7 @@ export function AppShell({
   userName,
   apiModeLabel,
   isMock,
+  navItems,
   onNavigate,
   onLogout,
   onToggleTheme,
@@ -81,7 +77,14 @@ export function AppShell({
 
             <div className="grid gap-3">
               <Button label={theme === 'light' ? 'Tema escuro' : 'Tema claro'} variant="outline" onClick={onToggleTheme} fullWidth />
-              <Button label="Sair" variant="ghost" onClick={onLogout} fullWidth />
+              <Button
+                label="Sair"
+                variant="ghost"
+                onClick={() => {
+                  void onLogout();
+                }}
+                fullWidth
+              />
             </div>
           </div>
         </aside>
