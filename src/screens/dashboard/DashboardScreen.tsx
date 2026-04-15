@@ -33,14 +33,14 @@ export function DashboardScreen() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <StatCard label="Usuarios ativos" value={String(summary.usersCount)} note="Perfis cadastrados para as areas administrativa e clinica." />
         <StatCard label="Pacientes ativos" value={String(summary.activePatients)} note="Registros disponiveis para consultas e acompanhamento." />
         <StatCard label="Pacientes inativos" value={String(summary.inactivePatients)} note="Registros preservados para historico sem exclusao fisica." />
       </div>
 
       <Card>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="max-w-3xl gap-2">
             <Badge label="Semana 1-2 / 3-4" tone="soft" />
             <h2 className="text-2xl font-black text-ink">Base entregue para evolucao do HealthSys SaaS</h2>
@@ -57,7 +57,7 @@ export function DashboardScreen() {
         </div>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <div className="grid gap-3">
             <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">Entregavel concluido</div>
