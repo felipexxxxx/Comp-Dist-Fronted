@@ -71,7 +71,7 @@ export function UsersScreen() {
         action={<Badge label={`${users.length} registros`} tone="neutral" />}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
         <Card>
           <div className="grid gap-4">
             <div className="grid gap-2">
