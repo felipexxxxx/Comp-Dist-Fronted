@@ -14,6 +14,7 @@ import type {
   UserRole,
   UserRecord
 } from './types';
+import { readSession } from './session';
 import { createId, readJson, writeJson } from './storage';
 
 const USERS_KEY = 'healthsys-users';
@@ -28,93 +29,12 @@ type StoredUserRecord = UserRecord & {
 const initialUsers: StoredUserRecord[] = [
   {
     id: 'usr-admin',
-    name: 'Felipe de Paula',
+    name: 'Administrator',
     email: 'admin@healthsys.local',
     role: 'ADMIN',
     active: true,
     password: 'Admin@123',
     createdAt: '2026-03-25T08:00:00.000Z'
-  },
-  {
-    id: 'usr-med',
-    name: 'Larissa Elias',
-    email: 'larissa@healthsys.local',
-    role: 'HEALTH_PROFESSIONAL',
-    active: true,
-    password: 'Med@12345',
-    createdAt: '2026-03-25T08:20:00.000Z'
-  },
-  {
-    id: 'usr-front',
-    name: 'Salomao Vasques',
-    email: 'front@healthsys.local',
-    role: 'RECEPTIONIST',
-    active: true,
-    password: 'Recep@123',
-    createdAt: '2026-03-25T08:40:00.000Z'
-  }
-];
-
-const initialPatients: PatientRecord[] = [
-  {
-    id: 'pat-001',
-    name: 'Maria Silva',
-    birthDate: '1985-04-12',
-    sex: 'FEMALE',
-    phone: '(85) 99999-1001',
-    active: true,
-    createdAt: '2026-03-25T09:00:00.000Z'
-  },
-  {
-    id: 'pat-002',
-    name: 'Joao Pereira',
-    birthDate: '1978-09-30',
-    sex: 'MALE',
-    phone: '(85) 98888-2002',
-    active: true,
-    createdAt: '2026-03-25T09:10:00.000Z'
-  }
-];
-
-const initialTriages: TriageRecord[] = [
-  {
-    id: 'tri-001',
-    patientId: 'pat-001',
-    patientName: 'Maria Silva',
-    priority: 'URGENT',
-    status: 'WAITING',
-    chiefComplaint: 'Dor toracica e falta de ar',
-    notes: 'Paciente orientada, aguardando avaliacao medica.',
-    attendedBy: null,
-    createdAt: '2026-04-08T10:30:00.000Z',
-    updatedAt: '2026-04-08T10:30:00.000Z',
-    attendedAt: null
-  },
-  {
-    id: 'tri-002',
-    patientId: 'pat-002',
-    patientName: 'Joao Pereira',
-    priority: 'LESS_URGENT',
-    status: 'IN_PROGRESS',
-    chiefComplaint: 'Febre persistente',
-    notes: 'Sinais vitais estaveis.',
-    attendedBy: 'Larissa Elias',
-    createdAt: '2026-04-08T11:20:00.000Z',
-    updatedAt: '2026-04-08T11:35:00.000Z',
-    attendedAt: '2026-04-08T11:35:00.000Z'
-  }
-];
-
-const initialNotifications: NotificationRecord[] = [
-  {
-    id: 'not-001',
-    eventType: 'TRIAGE_CREATED',
-    resourceId: 'tri-001',
-    routingKey: 'healthsys.triage.created',
-    payload: JSON.stringify({ eventType: 'TRIAGE_CREATED', payload: { patientName: 'Maria Silva', priority: 'URGENT' } }),
-    status: 'UNREAD',
-    occurredAt: '2026-04-08T10:30:00.000Z',
-    readAt: null
   }
 ];
 
@@ -130,32 +50,17 @@ function seedUsers() {
 
 function seedPatients() {
   const patients = readJson<PatientRecord[]>(PATIENTS_KEY, []);
-  if (patients.length > 0) {
-    return patients;
-  }
-
-  writeJson(PATIENTS_KEY, initialPatients);
-  return initialPatients;
+  return patients;
 }
 
 function seedTriages() {
   const triages = readJson<TriageRecord[]>(TRIAGES_KEY, []);
-  if (triages.length > 0) {
-    return triages;
-  }
-
-  writeJson(TRIAGES_KEY, initialTriages);
-  return initialTriages;
+  return triages;
 }
 
 function seedNotifications() {
   const notifications = readJson<NotificationRecord[]>(NOTIFICATIONS_KEY, []);
-  if (notifications.length > 0) {
-    return notifications;
-  }
-
-  writeJson(NOTIFICATIONS_KEY, initialNotifications);
-  return initialNotifications;
+  return notifications;
 }
 
 function persistUsers(users: StoredUserRecord[]) {
@@ -234,6 +139,16 @@ export function createMockHealthSysApi(): HealthSysApi {
       return undefined;
     },
 
+    async getCurrentUser() {
+      const session = readSession();
+
+      if (!session) {
+        throw new Error('Sessao nao encontrada.');
+      }
+
+      return session.user;
+    },
+
     async getDashboardSummary(): Promise<DashboardSummary> {
       const users = seedUsers();
       const patients = seedPatients();
@@ -277,6 +192,16 @@ export function createMockHealthSysApi(): HealthSysApi {
       return seedPatients();
     },
 
+    async getPatient(id: string) {
+      const patient = seedPatients().find((item) => item.id === id);
+
+      if (!patient) {
+        throw new Error('Paciente nao encontrado.');
+      }
+
+      return patient;
+    },
+
     async createPatient(input: CreatePatientInput) {
       const patients = seedPatients();
       const now = new Date().toISOString();
@@ -317,6 +242,20 @@ export function createMockHealthSysApi(): HealthSysApi {
 
     async listTriages() {
       return seedTriages();
+    },
+
+    async getTriage(id: string) {
+      const triage = seedTriages().find((item) => item.id === id);
+
+      if (!triage) {
+        throw new Error('Triagem nao encontrada.');
+      }
+
+      return triage;
+    },
+
+    async listTriagesByPatient(patientId: string) {
+      return seedTriages().filter((triage) => triage.patientId === patientId);
     },
 
     async createTriage(input: CreateTriageInput) {
@@ -372,6 +311,16 @@ export function createMockHealthSysApi(): HealthSysApi {
     async listNotifications(unread?: boolean) {
       const notifications = seedNotifications();
       return unread ? notifications.filter((notification) => notification.status === 'UNREAD') : notifications;
+    },
+
+    async getNotification(id: string) {
+      const notification = seedNotifications().find((item) => item.id === id);
+
+      if (!notification) {
+        throw new Error('Notificacao nao encontrada.');
+      }
+
+      return notification;
     },
 
     async markNotificationAsRead(id: string) {

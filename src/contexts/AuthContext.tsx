@@ -21,8 +21,46 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   useEffect(() => {
-    setSession(readSession());
-    setIsBootstrapping(false);
+    let mounted = true;
+
+    const bootstrapSession = async () => {
+      const storedSession = readSession();
+
+      if (!storedSession) {
+        if (mounted) {
+          setIsBootstrapping(false);
+        }
+        return;
+      }
+
+      try {
+        const currentUser = await apiClient.getCurrentUser();
+        const nextSession = {
+          ...storedSession,
+          user: currentUser
+        };
+
+        if (mounted) {
+          setSession(nextSession);
+          persistSession(nextSession);
+        }
+      } catch {
+        if (mounted) {
+          setSession(null);
+          persistSession(null);
+        }
+      } finally {
+        if (mounted) {
+          setIsBootstrapping(false);
+        }
+      }
+    };
+
+    void bootstrapSession();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(

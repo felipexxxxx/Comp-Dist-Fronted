@@ -8,7 +8,9 @@ Front web em React + TypeScript + Tailwind CSS, empacotado com Vite.
 - dashboard shell
 - cadastro e listagem de usuarios
 - cadastro, listagem e atualizacao de pacientes
-- cliente de API configuravel com fallback local
+- triagem clinica com criacao, listagem e atualizacao de status
+- notificacoes assincronas com listagem e marcacao como lida
+- cliente de API apontando para o backend real por padrao
 
 ## Estrutura
 
@@ -19,16 +21,21 @@ Front web em React + TypeScript + Tailwind CSS, empacotado com Vite.
 - `src/services/api/`
 - `src/theme/`
 
-## Credenciais demo
+## Acesso inicial
 
 - `admin@healthsys.local` / `Admin@123`
 
 ## Configuracao da API
 
-Por padrao o front usa o modo demo local. Para consumir o backend real:
+Por padrao o front consome o backend real em `http://localhost:8080`.
 
-- defina `VITE_API_BASE_URL`
-- defina `VITE_USE_MOCK_API=false`
+Para apontar para outra URL:
+
+- defina `VITE_API_BASE_URL=http://host-do-gateway:8080`
+
+O modo local em memoria/localStorage existe apenas para desenvolvimento isolado e so e ativado explicitamente:
+
+- defina `VITE_USE_MOCK_API=true`
 
 ## Comandos
 

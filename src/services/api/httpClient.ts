@@ -46,6 +46,8 @@ type BackendAuthSession = {
   user: BackendUserRecord;
 };
 
+type BackendMeResponse = Omit<BackendUserRecord, 'active' | 'createdAt'>;
+
 function mapUserRecord(user: BackendUserRecord): UserRecord {
   return {
     id: user.id,
@@ -161,8 +163,23 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
     return patients.map(mapPatientRecord);
   };
 
+  const getPatient = async (id: string) => {
+    const patient = await requestJson<BackendPatientRecord>(baseUrl, `/api/patients/${id}`);
+    return mapPatientRecord(patient);
+  };
+
   const listTriages = async () => {
     const triages = await requestJson<BackendTriageRecord[]>(baseUrl, '/api/triages');
+    return triages.map(mapTriageRecord);
+  };
+
+  const getTriage = async (id: string) => {
+    const triage = await requestJson<BackendTriageRecord>(baseUrl, `/api/triages/${id}`);
+    return mapTriageRecord(triage);
+  };
+
+  const listTriagesByPatient = async (patientId: string) => {
+    const triages = await requestJson<BackendTriageRecord[]>(baseUrl, `/api/triages/patient/${patientId}`);
     return triages.map(mapTriageRecord);
   };
 
@@ -170,6 +187,11 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
     const query = unread ? '?unread=true' : '';
     const notifications = await requestJson<BackendNotificationRecord[]>(baseUrl, `/api/notifications${query}`);
     return notifications.map(mapNotificationRecord);
+  };
+
+  const getNotification = async (id: string) => {
+    const notification = await requestJson<BackendNotificationRecord>(baseUrl, `/api/notifications/${id}`);
+    return mapNotificationRecord(notification);
   };
 
   return {
@@ -184,6 +206,18 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
       return requestWithoutBody(baseUrl, '/api/auth/logout', {
         method: 'POST'
       });
+    },
+
+    async getCurrentUser() {
+      const user = await requestJson<BackendMeResponse>(baseUrl, '/api/auth/me');
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        active: true,
+        createdAt: ''
+      };
     },
 
     async getDashboardSummary() {
@@ -226,6 +260,10 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
       return listPatients();
     },
 
+    getPatient(id: string) {
+      return getPatient(id);
+    },
+
     createPatient(input: CreatePatientInput) {
       return requestJson<BackendPatientRecord>(baseUrl, '/api/patients', {
         method: 'POST',
@@ -242,6 +280,14 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
 
     listTriages() {
       return listTriages();
+    },
+
+    getTriage(id: string) {
+      return getTriage(id);
+    },
+
+    listTriagesByPatient(patientId: string) {
+      return listTriagesByPatient(patientId);
     },
 
     createTriage(input: CreateTriageInput) {
@@ -261,6 +307,10 @@ export function createHttpHealthSysApi(baseUrl: string): HealthSysApi {
 
     listNotifications(unread?: boolean) {
       return listNotifications(unread);
+    },
+
+    getNotification(id: string) {
+      return getNotification(id);
     },
 
     markNotificationAsRead(id: string) {
