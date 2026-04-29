@@ -73,7 +73,9 @@ function describeNotification(notification: NotificationRecord) {
 export function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [filter, setFilter] = useState<NotificationFilter>('ALL');
+  const [selectedNotification, setSelectedNotification] = useState<NotificationRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -98,13 +100,27 @@ export function NotificationsScreen() {
     setUpdatingId(notification.id);
 
     try {
-      await apiClient.markNotificationAsRead(notification.id);
+      const updatedNotification = await apiClient.markNotificationAsRead(notification.id);
+      setSelectedNotification(updatedNotification);
       await loadNotifications();
       setMessage('Notificacao marcada como lida.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Nao foi possivel atualizar a notificacao.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleLoadDetails = async (notificationId: string) => {
+    setError('');
+    setIsLoadingDetails(true);
+
+    try {
+      setSelectedNotification(await apiClient.getNotification(notificationId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Nao foi possivel carregar a notificacao.');
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
@@ -132,6 +148,28 @@ export function NotificationsScreen() {
           {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div> : null}
           {message ? <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{message}</div> : null}
 
+          {selectedNotification ? (
+            <div className="rounded-3xl border border-stone bg-panelSoft px-4 py-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">Detalhe da notificacao</div>
+                  <div className="mt-2 text-base font-black text-ink">{formatEvent(selectedNotification.eventType)}</div>
+                  <p className="mt-1 text-sm leading-6 text-cocoa">{describeNotification(selectedNotification)}</p>
+                </div>
+                <Badge
+                  label={isLoadingDetails ? 'Carregando' : selectedNotification.status === 'UNREAD' ? 'Nao lida' : 'Lida'}
+                  tone={selectedNotification.status === 'UNREAD' ? 'warning' : 'success'}
+                />
+              </div>
+              <div className="mt-4 grid gap-2 text-xs uppercase tracking-[0.2em] text-clay md:grid-cols-2">
+                <span>Recebida em {formatDateTime(selectedNotification.occurredAt)}</span>
+                <span>Rota: {selectedNotification.routingKey}</span>
+                <span>Recurso: {selectedNotification.resourceId ?? 'Nao informado'}</span>
+                <span>ID: {selectedNotification.id}</span>
+              </div>
+            </div>
+          ) : null}
+
           {isLoading ? (
             <div className="rounded-2xl border border-stone bg-white px-4 py-5 text-sm font-bold text-cocoa">Carregando notificacoes...</div>
           ) : notifications.length === 0 ? (
@@ -153,16 +191,26 @@ export function NotificationsScreen() {
                       Recebida em {formatDateTime(notification.occurredAt)}
                     </div>
 
-                    {notification.status === 'UNREAD' ? (
+                    <div className="flex flex-wrap gap-2">
                       <Button
-                        label="Marcar como lida"
-                        variant="outline"
-                        disabled={updatingId === notification.id}
+                        label="Detalhes"
+                        variant="ghost"
+                        disabled={isLoadingDetails}
                         onClick={() => {
-                          void handleMarkAsRead(notification);
+                          void handleLoadDetails(notification.id);
                         }}
                       />
-                    ) : null}
+                      {notification.status === 'UNREAD' ? (
+                        <Button
+                          label="Marcar como lida"
+                          variant="outline"
+                          disabled={updatingId === notification.id}
+                          onClick={() => {
+                            void handleMarkAsRead(notification);
+                          }}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ))}

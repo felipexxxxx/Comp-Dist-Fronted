@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { apiClient } from '../../services/api/client';
-import type { CreatePatientInput, PatientRecord, PatientSex, UpdatePatientInput } from '../../services/api/types';
+import type { CreatePatientInput, PatientRecord, PatientSex, TriageRecord, UpdatePatientInput } from '../../services/api/types';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -33,11 +33,17 @@ export function PatientsScreen() {
   const [form, setForm] = useState<CreatePatientInput>(initialForm);
   const [formActive, setFormActive] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatientDetails, setSelectedPatientDetails] = useState<PatientRecord | null>(null);
+  const [patientTriages, setPatientTriages] = useState<TriageRecord[]>([]);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const selectedPatient = useMemo(() => patients.find((patient) => patient.id === selectedPatientId) ?? null, [patients, selectedPatientId]);
+  const selectedPatient = useMemo(
+    () => selectedPatientDetails ?? patients.find((patient) => patient.id === selectedPatientId) ?? null,
+    [patients, selectedPatientDetails, selectedPatientId]
+  );
 
   const loadPatients = async () => {
     const nextPatients = await apiClient.listPatients();
@@ -47,6 +53,40 @@ export function PatientsScreen() {
   useEffect(() => {
     loadPatients().catch((cause) => setError(cause instanceof Error ? cause.message : 'Falha ao carregar pacientes'));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedPatientId) {
+      setSelectedPatientDetails(null);
+      setPatientTriages([]);
+      return;
+    }
+
+    setIsLoadingDetails(true);
+
+    Promise.all([apiClient.getPatient(selectedPatientId), apiClient.listTriagesByPatient(selectedPatientId)])
+      .then(([patientDetails, triages]) => {
+        if (!cancelled) {
+          setSelectedPatientDetails(patientDetails);
+          setPatientTriages(triages);
+        }
+      })
+      .catch((cause) => {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : 'Falha ao carregar detalhes do paciente');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingDetails(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPatientId]);
 
   useEffect(() => {
     if (!selectedPatient) {
@@ -64,6 +104,8 @@ export function PatientsScreen() {
 
   const resetForm = () => {
     setSelectedPatientId(null);
+    setSelectedPatientDetails(null);
+    setPatientTriages([]);
     setForm(initialForm);
     setFormActive(true);
   };
@@ -148,6 +190,32 @@ export function PatientsScreen() {
             {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div> : null}
             {message ? <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{message}</div> : null}
 
+            {selectedPatient ? (
+              <div className="rounded-3xl border border-stone bg-panelSoft px-4 py-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">Detalhe do paciente</div>
+                    <div className="mt-2 text-base font-black text-ink">{selectedPatient.name}</div>
+                    <p className="mt-1 text-sm leading-6 text-cocoa">
+                      Consulta individual via API com {patientTriages.length} triagem(ns) vinculada(s).
+                    </p>
+                  </div>
+                  <Badge label={isLoadingDetails ? 'Carregando' : selectedPatient.active ? 'Ativo' : 'Inativo'} tone={selectedPatient.active ? 'success' : 'neutral'} />
+                </div>
+
+                {patientTriages.length > 0 ? (
+                  <div className="mt-4 grid gap-2">
+                    {patientTriages.slice(0, 3).map((triage) => (
+                      <div key={triage.id} className="rounded-2xl border border-stone bg-white px-3 py-3">
+                        <div className="text-sm font-black text-ink">{triage.chiefComplaint}</div>
+                        <div className="mt-1 text-xs uppercase tracking-[0.2em] text-clay">{triage.priority} / {triage.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap gap-3">
               <Button label={isSaving ? 'Salvando' : selectedPatient ? 'Atualizar' : 'Cadastrar'} onClick={handleSubmit} disabled={isSaving} />
               <Button label="Limpar" variant="outline" onClick={resetForm} />
@@ -194,6 +262,7 @@ export function PatientsScreen() {
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Button label="Editar" variant="soft" onClick={() => setSelectedPatientId(patient.id)} />
+                        <Button label="Detalhes" variant="ghost" onClick={() => setSelectedPatientId(patient.id)} />
                         <Button
                           label={patient.active ? 'Inativar' : 'Reativar'}
                           variant="outline"

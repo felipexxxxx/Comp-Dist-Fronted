@@ -68,7 +68,9 @@ export function TriagesScreen() {
   const [triages, setTriages] = useState<TriageRecord[]>([]);
   const [form, setForm] = useState<CreateTriageInput>(initialForm);
   const [filter, setFilter] = useState<TriageFilter>('ALL');
+  const [selectedTriage, setSelectedTriage] = useState<TriageRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -111,7 +113,7 @@ export function TriagesScreen() {
     setIsSaving(true);
 
     try {
-      await apiClient.createTriage({
+      const createdTriage = await apiClient.createTriage({
         patientId: form.patientId,
         patientName: form.patientName,
         priority: form.priority,
@@ -119,6 +121,7 @@ export function TriagesScreen() {
         notes: form.notes?.trim() || undefined
       });
       await loadData();
+      setSelectedTriage(await apiClient.getTriage(createdTriage.id));
       setForm(initialForm);
       setMessage('Triagem registrada com sucesso.');
     } catch (cause) {
@@ -141,11 +144,25 @@ export function TriagesScreen() {
         attendedBy: userName
       });
       await loadData();
+      setSelectedTriage(await apiClient.getTriage(triage.id));
       setMessage(`Triagem de ${triage.patientName} atualizada para ${statusLabel[status].toLowerCase()}.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Nao foi possivel atualizar a triagem.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleLoadTriageDetails = async (triageId: string) => {
+    setError('');
+    setIsLoadingDetails(true);
+
+    try {
+      setSelectedTriage(await apiClient.getTriage(triageId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Nao foi possivel carregar a triagem.');
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
@@ -211,6 +228,25 @@ export function TriagesScreen() {
             {message ? <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{message}</div> : null}
 
             <Button label={isSaving ? 'Registrando' : 'Registrar triagem'} onClick={handleCreate} disabled={isSaving} fullWidth />
+
+            {selectedTriage ? (
+              <div className="rounded-3xl border border-stone bg-panelSoft px-4 py-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">Detalhe da triagem</div>
+                    <div className="mt-2 text-base font-black text-ink">{selectedTriage.patientName}</div>
+                    <p className="mt-1 text-sm leading-6 text-cocoa">{selectedTriage.chiefComplaint}</p>
+                  </div>
+                  <Badge label={isLoadingDetails ? 'Carregando' : statusLabel[selectedTriage.status]} tone={selectedTriage.status === 'COMPLETED' ? 'success' : 'neutral'} />
+                </div>
+                <div className="mt-4 grid gap-2 text-xs uppercase tracking-[0.2em] text-clay md:grid-cols-2">
+                  <span>Prioridade: {priorityLabel[selectedTriage.priority]}</span>
+                  <span>Atualizada em {formatDateTime(selectedTriage.updatedAt)}</span>
+                  <span>{selectedTriage.attendedBy ? `Responsavel: ${selectedTriage.attendedBy}` : 'Sem responsavel definido'}</span>
+                  <span>ID: {selectedTriage.id}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
 
@@ -248,8 +284,18 @@ export function TriagesScreen() {
                       <span>{triage.attendedBy ? `Responsavel: ${triage.attendedBy}` : 'Sem responsavel definido'}</span>
                     </div>
 
-                    {canUpdateStatus ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        label="Detalhes"
+                        variant="ghost"
+                        disabled={isLoadingDetails}
+                        onClick={() => {
+                          void handleLoadTriageDetails(triage.id);
+                        }}
+                      />
+
+                      {canUpdateStatus ? (
+                        <>
                         {triage.status === 'WAITING' ? (
                           <Button
                             label="Iniciar"
@@ -280,8 +326,9 @@ export function TriagesScreen() {
                             }}
                           />
                         ) : null}
-                      </div>
-                    ) : null}
+                        </>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
