@@ -33,10 +33,13 @@ export function AppShell({
 }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const environmentBadge = (
+    <Badge label={isMock ? 'Ambiente local' : 'Servicos online'} tone={isMock ? 'soft' : 'success'} />
+  );
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
-      {/* ── Mobile top bar (< lg) ─────────────────────────────── */}
-      <header className="sticky top-0 z-30 lg:hidden border-b border-[var(--border)] bg-[var(--panel)]/95 backdrop-blur px-4 py-3">
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--panel)]/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <BrandMark />
           <div className="flex items-center gap-2">
@@ -45,33 +48,34 @@ export function AppShell({
               onClick={onToggleTheme}
               className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-bold text-ink transition hover:bg-sand"
             >
-              {theme === 'light' ? '🌙' : '☀️'}
+              {theme === 'light' ? 'Tema' : 'Claro'}
             </button>
             <button
               type="button"
-              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              onClick={() => setMobileMenuOpen((current) => !current)}
               className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-bold text-ink transition hover:bg-sand"
               aria-label="Menu"
             >
-              {mobileMenuOpen ? '✕' : '☰'}
+              {mobileMenuOpen ? 'Fechar' : 'Menu'}
             </button>
           </div>
         </div>
 
-        {/* Horizontal nav tabs */}
-        <nav className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
           {navItems.map((item) => {
             const active = item.key === currentRoute;
+
             return (
               <button
                 key={item.key}
                 type="button"
-                onClick={() => { onNavigate(item.key); setMobileMenuOpen(false); }}
+                onClick={() => {
+                  onNavigate(item.key);
+                  setMobileMenuOpen(false);
+                }}
                 className={[
                   'shrink-0 rounded-xl border px-4 py-2 text-sm font-bold transition',
-                  active
-                    ? 'border-ember bg-parchment text-emberStrong'
-                    : 'border-[var(--border)] bg-white text-ink'
+                  active ? 'border-ember bg-parchment text-emberStrong' : 'border-[var(--border)] bg-white text-ink'
                 ].join(' ')}
               >
                 {item.label}
@@ -80,65 +84,54 @@ export function AppShell({
           })}
         </nav>
 
-        {/* Expandable info panel */}
-        {mobileMenuOpen && (
+        {mobileMenuOpen ? (
           <div className="mt-3 grid gap-3 rounded-2xl border border-[var(--border)] bg-panelSoft p-4">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">Sessão ativa</div>
+              <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">Sessao ativa</div>
               <div className="mt-1 text-sm font-black text-ink">{userName}</div>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <Badge label={isMock ? 'Modo demo' : 'Modo HTTP'} tone={isMock ? 'soft' : 'success'} />
+              {environmentBadge}
               <span className="text-xs text-cocoa">{apiModeLabel}</span>
             </div>
             <Button
               label="Sair"
               variant="ghost"
-              onClick={() => { void onLogout(); }}
+              onClick={() => {
+                void onLogout();
+              }}
               fullWidth
             />
           </div>
-        )}
+        ) : null}
       </header>
 
-      {/* ── Desktop layout (lg+) ───────────────────────────────── */}
       <div className="flex min-h-screen flex-col lg:flex-row">
-        {/* Sidebar – hidden on mobile (handled by top bar above) */}
-        <aside className="hidden lg:flex lg:min-h-screen lg:w-[260px] xl:w-[300px] flex-col border-r border-[var(--border)] bg-[var(--panel)]/95 px-5 py-5">
+        <aside className="hidden flex-col border-r border-[var(--border)] bg-[var(--panel)]/95 px-5 py-5 lg:flex lg:min-h-screen lg:w-[260px] xl:w-[300px]">
           <div className="flex h-full flex-col gap-6">
             <BrandMark />
 
             <section className="rounded-3xl border border-[var(--border)] bg-sand p-4">
               <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">Sessao ativa</div>
               <div className="mt-2 text-lg font-black text-ink">{userName}</div>
-              <p className="mt-1 text-sm text-cocoa">
-                Acesso administrativo e operacional para o MVP das semanas 1-4.
-              </p>
+              <p className="mt-1 text-sm text-cocoa">Acesso seguro ao painel operacional do hospital.</p>
             </section>
 
             <nav className="grid gap-2">
               {navItems.map((item) => {
                 const active = item.key === currentRoute;
+
                 return (
                   <button
                     key={item.key}
                     type="button"
                     className={[
                       'rounded-2xl border px-4 py-4 text-left transition',
-                      active
-                        ? 'border-ember bg-parchment'
-                        : 'border-[var(--border)] bg-white'
+                      active ? 'border-ember bg-parchment' : 'border-[var(--border)] bg-white'
                     ].join(' ')}
                     onClick={() => onNavigate(item.key)}
                   >
-                    <div
-                      className={[
-                        'text-sm font-black',
-                        active ? 'text-emberStrong' : 'text-ink'
-                      ].join(' ')}
-                    >
-                      {item.label}
-                    </div>
+                    <div className={['text-sm font-black', active ? 'text-emberStrong' : 'text-ink'].join(' ')}>{item.label}</div>
                   </button>
                 );
               })}
@@ -147,39 +140,29 @@ export function AppShell({
             <section className="rounded-3xl border border-[var(--border)] bg-panelSoft p-4">
               <div className="text-xs font-bold uppercase tracking-[0.28em] text-clay">API</div>
               <div className="mt-2 text-sm font-bold text-ink">{apiModeLabel}</div>
-              <p className="mt-1 text-xs leading-5 text-cocoa">
-                Base configuravel via `VITE_API_BASE_URL`. O front usa mock local quando a URL nao esta definida.
-              </p>
-              <div className="mt-4">
-                <Badge label={isMock ? 'Modo demo' : 'Modo HTTP'} tone={isMock ? 'soft' : 'success'} />
-              </div>
+              <p className="mt-1 text-xs leading-5 text-cocoa">Sessao autenticada com persistencia e integracao preparada para os servicos distribuidos.</p>
+              <div className="mt-4">{environmentBadge}</div>
             </section>
 
             <div className="mt-auto grid gap-3">
-              <Button
-                label={theme === 'light' ? 'Tema escuro' : 'Tema claro'}
-                variant="outline"
-                onClick={onToggleTheme}
-                fullWidth
-              />
+              <Button label={theme === 'light' ? 'Tema escuro' : 'Tema claro'} variant="outline" onClick={onToggleTheme} fullWidth />
               <Button
                 label="Sair"
                 variant="ghost"
-                onClick={() => { void onLogout(); }}
+                onClick={() => {
+                  void onLogout();
+                }}
                 fullWidth
               />
             </div>
           </div>
         </aside>
 
-        {/* Main content */}
         <main className="min-w-0 flex-1">
           <div className="border-b border-[var(--border)] bg-[var(--panel)]/90 px-4 py-5 shadow-soft md:px-6 lg:px-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="max-w-3xl gap-2">
-                <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">
-                  HealthSys Distribuido
-                </div>
+                <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">HealthSys Distribuido</div>
                 <h1 className="text-2xl font-black text-ink sm:text-3xl md:text-4xl">{title}</h1>
                 <p className="text-sm leading-6 text-cocoa md:text-base">{subtitle}</p>
               </div>

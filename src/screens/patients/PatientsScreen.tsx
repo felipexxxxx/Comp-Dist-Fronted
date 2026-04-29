@@ -23,9 +23,15 @@ const sexOptions: Array<{ label: string; value: PatientSex; description: string 
   { label: 'Outro', value: 'OTHER', description: 'Registro base do paciente' }
 ];
 
+const activeOptions: Array<{ label: string; value: 'ACTIVE' | 'INACTIVE'; description: string }> = [
+  { label: 'Ativo', value: 'ACTIVE', description: 'Disponivel para atendimento' },
+  { label: 'Inativo', value: 'INACTIVE', description: 'Preservado apenas para historico' }
+];
+
 export function PatientsScreen() {
   const [patients, setPatients] = useState<PatientRecord[]>([]);
   const [form, setForm] = useState<CreatePatientInput>(initialForm);
+  const [formActive, setFormActive] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -53,11 +59,13 @@ export function PatientsScreen() {
       sex: selectedPatient.sex,
       phone: selectedPatient.phone
     });
+    setFormActive(selectedPatient.active);
   }, [selectedPatient]);
 
   const resetForm = () => {
     setSelectedPatientId(null);
     setForm(initialForm);
+    setFormActive(true);
   };
 
   const handleSubmit = async () => {
@@ -76,7 +84,7 @@ export function PatientsScreen() {
         const payload: UpdatePatientInput = {
           id: selectedPatientId,
           ...form,
-          active: selectedPatient?.active ?? true
+          active: formActive
         };
         await apiClient.updatePatient(payload);
         setMessage('Paciente atualizado com sucesso.');
@@ -99,7 +107,7 @@ export function PatientsScreen() {
       <SectionHeader
         eyebrow="Cadastros"
         title="Pacientes, consulta e atualizacao"
-        description="Tela principal da sprint 3-4 para operacao de recepcao e evolucao clinica inicial."
+        description="Cadastre pacientes, mantenha os contatos atualizados e inative registros quando necessario sem remover o historico."
         action={<Badge label={`${patients.length} registros`} tone="neutral" />}
       />
 
@@ -108,7 +116,7 @@ export function PatientsScreen() {
           <div className="grid gap-4">
             <div className="grid gap-2">
               <h3 className="text-xl font-black text-ink">{selectedPatient ? 'Editar paciente' : 'Novo paciente'}</h3>
-              <p className="text-sm leading-6 text-cocoa">O formulario funciona para cadastro e edicao, cobrindo o requisito de consulta e atualizacao dos dados do paciente.</p>
+              <p className="text-sm leading-6 text-cocoa">Atualize dados pessoais e de contato usados pela recepcao e pela triagem clinica.</p>
             </div>
 
             <Input label="Nome completo" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nome do paciente" />
@@ -127,6 +135,15 @@ export function PatientsScreen() {
               onChange={(value) => setForm((current) => ({ ...current, sex: value }))}
               options={sexOptions}
             />
+
+            {selectedPatient ? (
+              <SegmentedControl
+                label="Status cadastral"
+                value={formActive ? 'ACTIVE' : 'INACTIVE'}
+                onChange={(value) => setFormActive(value === 'ACTIVE')}
+                options={activeOptions}
+              />
+            ) : null}
 
             {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div> : null}
             {message ? <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{message}</div> : null}
@@ -177,7 +194,28 @@ export function PatientsScreen() {
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Button label="Editar" variant="soft" onClick={() => setSelectedPatientId(patient.id)} />
-                        <Button label="Selecionar" variant="outline" onClick={() => setSelectedPatientId(patient.id)} />
+                        <Button
+                          label={patient.active ? 'Inativar' : 'Reativar'}
+                          variant="outline"
+                          onClick={async () => {
+                            setError('');
+                            setMessage('');
+                            try {
+                              await apiClient.updatePatient({
+                                id: patient.id,
+                                name: patient.name,
+                                birthDate: patient.birthDate,
+                                sex: patient.sex,
+                                phone: patient.phone,
+                                active: !patient.active
+                              });
+                              await loadPatients();
+                              setMessage(patient.active ? 'Paciente inativado com sucesso.' : 'Paciente reativado com sucesso.');
+                            } catch (cause) {
+                              setError(cause instanceof Error ? cause.message : 'Nao foi possivel atualizar o status do paciente.');
+                            }
+                          }}
+                        />
                       </div>
                     </div>
                   );

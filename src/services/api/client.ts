@@ -9,6 +9,6 @@ export const apiClient: HealthSysApi = useMockApi ? createMockHealthSysApi() : c
 
 export const apiEnvironment = {
   mode: apiClient.mode,
-  baseUrl: useMockApi ? 'local-storage-demo' : configuredBaseUrl,
+  baseUrl: useMockApi ? 'local-storage' : configuredBaseUrl,
   isMock: useMockApi
 };

@@ -9,11 +9,13 @@ import { LoginScreen } from '../screens/auth/LoginScreen';
 import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
 import { UsersScreen } from '../screens/users/UsersScreen';
 import { PatientsScreen } from '../screens/patients/PatientsScreen';
+import { TriagesScreen } from '../screens/triages/TriagesScreen';
+import { NotificationsScreen } from '../screens/notifications/NotificationsScreen';
 
 const routeTitles: Record<string, { title: string; subtitle: string }> = {
   '/dashboard': {
     title: 'Painel hospitalar',
-    subtitle: 'Entregavel das semanas 1-2 e 3-4 com foco em operacao, cadastro e autenticacao.'
+    subtitle: 'Visao consolidada da operacao, pacientes, triagens e comunicacoes clinicas.'
   },
   '/users': {
     title: 'Usuarios e acessos',
@@ -21,7 +23,15 @@ const routeTitles: Record<string, { title: string; subtitle: string }> = {
   },
   '/patients': {
     title: 'Pacientes e historico',
-    subtitle: 'Cadastro, consulta e edicao de pacientes com persistencia local ou via API.'
+    subtitle: 'Cadastro, consulta, atualizacao e controle de status dos pacientes.'
+  },
+  '/triages': {
+    title: 'Triagem clinica',
+    subtitle: 'Abertura, priorizacao e acompanhamento do atendimento inicial.'
+  },
+  '/notifications': {
+    title: 'Notificacoes',
+    subtitle: 'Eventos operacionais recebidos da comunicacao assincrona entre servicos.'
   }
 };
 
@@ -71,7 +81,9 @@ function ShellLayout() {
   const navItems = [
     { key: '/dashboard', label: 'Dashboard' },
     ...(userRole === 'ADMIN' ? [{ key: '/users', label: 'Usuarios' }] : []),
-    { key: '/patients', label: 'Pacientes' }
+    { key: '/patients', label: 'Pacientes' },
+    { key: '/triages', label: 'Triagens' },
+    { key: '/notifications', label: 'Notificacoes' }
   ];
 
   useEffect(() => {
@@ -82,7 +94,7 @@ function ShellLayout() {
 
   return (
     <AppShell
-      apiModeLabel="API web configuravel"
+      apiModeLabel={apiEnvironment.isMock ? 'Operacao local' : 'Operacao integrada'}
       currentRoute={location.pathname}
       navItems={navItems}
       onLogout={async () => {
@@ -132,6 +144,8 @@ export function AppRoutes() {
             }
           />
           <Route path="/patients" element={<PatientsScreen />} />
+          <Route path="/triages" element={<TriagesScreen />} />
+          <Route path="/notifications" element={<NotificationsScreen />} />
         </Route>
       </Route>
 

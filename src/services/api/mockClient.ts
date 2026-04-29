@@ -1,12 +1,16 @@
 import type {
   AuthSession,
   CreatePatientInput,
+  CreateTriageInput,
   CreateUserInput,
   DashboardSummary,
   HealthSysApi,
   LoginInput,
+  NotificationRecord,
   PatientRecord,
+  TriageRecord,
   UpdatePatientInput,
+  UpdateTriageStatusInput,
   UserRole,
   UserRecord
 } from './types';
@@ -14,6 +18,8 @@ import { createId, readJson, writeJson } from './storage';
 
 const USERS_KEY = 'healthsys-users';
 const PATIENTS_KEY = 'healthsys-patients';
+const TRIAGES_KEY = 'healthsys-triages';
+const NOTIFICATIONS_KEY = 'healthsys-notifications';
 
 type StoredUserRecord = UserRecord & {
   password: string;
@@ -70,6 +76,48 @@ const initialPatients: PatientRecord[] = [
   }
 ];
 
+const initialTriages: TriageRecord[] = [
+  {
+    id: 'tri-001',
+    patientId: 'pat-001',
+    patientName: 'Maria Silva',
+    priority: 'URGENT',
+    status: 'WAITING',
+    chiefComplaint: 'Dor toracica e falta de ar',
+    notes: 'Paciente orientada, aguardando avaliacao medica.',
+    attendedBy: null,
+    createdAt: '2026-04-08T10:30:00.000Z',
+    updatedAt: '2026-04-08T10:30:00.000Z',
+    attendedAt: null
+  },
+  {
+    id: 'tri-002',
+    patientId: 'pat-002',
+    patientName: 'Joao Pereira',
+    priority: 'LESS_URGENT',
+    status: 'IN_PROGRESS',
+    chiefComplaint: 'Febre persistente',
+    notes: 'Sinais vitais estaveis.',
+    attendedBy: 'Larissa Elias',
+    createdAt: '2026-04-08T11:20:00.000Z',
+    updatedAt: '2026-04-08T11:35:00.000Z',
+    attendedAt: '2026-04-08T11:35:00.000Z'
+  }
+];
+
+const initialNotifications: NotificationRecord[] = [
+  {
+    id: 'not-001',
+    eventType: 'TRIAGE_CREATED',
+    resourceId: 'tri-001',
+    routingKey: 'healthsys.triage.created',
+    payload: JSON.stringify({ eventType: 'TRIAGE_CREATED', payload: { patientName: 'Maria Silva', priority: 'URGENT' } }),
+    status: 'UNREAD',
+    occurredAt: '2026-04-08T10:30:00.000Z',
+    readAt: null
+  }
+];
+
 function seedUsers() {
   const users = readJson<StoredUserRecord[]>(USERS_KEY, []);
   if (users.length > 0) {
@@ -90,12 +138,56 @@ function seedPatients() {
   return initialPatients;
 }
 
+function seedTriages() {
+  const triages = readJson<TriageRecord[]>(TRIAGES_KEY, []);
+  if (triages.length > 0) {
+    return triages;
+  }
+
+  writeJson(TRIAGES_KEY, initialTriages);
+  return initialTriages;
+}
+
+function seedNotifications() {
+  const notifications = readJson<NotificationRecord[]>(NOTIFICATIONS_KEY, []);
+  if (notifications.length > 0) {
+    return notifications;
+  }
+
+  writeJson(NOTIFICATIONS_KEY, initialNotifications);
+  return initialNotifications;
+}
+
 function persistUsers(users: StoredUserRecord[]) {
   writeJson(USERS_KEY, users);
 }
 
 function persistPatients(patients: PatientRecord[]) {
   writeJson(PATIENTS_KEY, patients);
+}
+
+function persistTriages(triages: TriageRecord[]) {
+  writeJson(TRIAGES_KEY, triages);
+}
+
+function persistNotifications(notifications: NotificationRecord[]) {
+  writeJson(NOTIFICATIONS_KEY, notifications);
+}
+
+function createNotification(eventType: string, resourceId: string, payload: object) {
+  const notifications = seedNotifications();
+  const notification: NotificationRecord = {
+    id: createId('not-'),
+    eventType,
+    resourceId,
+    routingKey: `healthsys.${eventType.toLowerCase().replace(/_/g, '.')}`,
+    payload: JSON.stringify({ eventType, resourceId, payload }),
+    status: 'UNREAD',
+    occurredAt: new Date().toISOString(),
+    readAt: null
+  };
+
+  persistNotifications([notification, ...notifications]);
 }
 
 function normalizeRole(role: string): UserRole {
@@ -132,7 +224,7 @@ export function createMockHealthSysApi(): HealthSysApi {
       const matchedUser = users.find((user) => user.email.toLowerCase() === input.email.toLowerCase() && user.password === input.password);
 
       if (!matchedUser) {
-        throw new Error('Invalid credentials for the local demo account.');
+        throw new Error('Credenciais invalidas.');
       }
 
       return buildSession(stripPassword(matchedUser));
@@ -152,7 +244,10 @@ export function createMockHealthSysApi(): HealthSysApi {
         usersCount: users.length,
         activePatients,
         inactivePatients,
-        systemLoad: 'Mock API online'
+        waitingTriages: seedTriages().filter((triage) => triage.status === 'WAITING').length,
+        inProgressTriages: seedTriages().filter((triage) => triage.status === 'IN_PROGRESS').length,
+        unreadNotifications: seedNotifications().filter((notification) => notification.status === 'UNREAD').length,
+        systemLoad: 'Online'
       };
     },
 
@@ -174,6 +269,7 @@ export function createMockHealthSysApi(): HealthSysApi {
 
       const nextUsers = [nextUser, ...users];
       persistUsers(nextUsers);
+      createNotification('USER_CREATED', nextUser.id, { name: nextUser.name, email: nextUser.email, role: nextUser.role });
       return stripPassword(nextUser);
     },
 
@@ -196,6 +292,7 @@ export function createMockHealthSysApi(): HealthSysApi {
 
       const nextPatients = [nextPatient, ...patients];
       persistPatients(nextPatients);
+      createNotification('PATIENT_CREATED', nextPatient.id, { name: nextPatient.name });
       return nextPatient;
     },
 
@@ -214,7 +311,83 @@ export function createMockHealthSysApi(): HealthSysApi {
 
       const nextPatients = patients.map((patient) => (patient.id === input.id ? nextPatient : patient));
       persistPatients(nextPatients);
+      createNotification('PATIENT_UPDATED', nextPatient.id, { name: nextPatient.name, active: nextPatient.active });
       return nextPatient;
+    },
+
+    async listTriages() {
+      return seedTriages();
+    },
+
+    async createTriage(input: CreateTriageInput) {
+      const triages = seedTriages();
+      const now = new Date().toISOString();
+      const nextTriage: TriageRecord = {
+        id: createId('tri-'),
+        patientId: input.patientId,
+        patientName: input.patientName,
+        priority: input.priority,
+        status: 'WAITING',
+        chiefComplaint: input.chiefComplaint,
+        notes: input.notes || null,
+        attendedBy: null,
+        createdAt: now,
+        updatedAt: now,
+        attendedAt: null
+      };
+
+      persistTriages([nextTriage, ...triages]);
+      createNotification('TRIAGE_CREATED', nextTriage.id, { patientName: nextTriage.patientName, priority: nextTriage.priority });
+      return nextTriage;
+    },
+
+    async updateTriageStatus(input: UpdateTriageStatusInput) {
+      const triages = seedTriages();
+      const now = new Date().toISOString();
+      const updatedTriages = triages.map((triage) => {
+        if (triage.id !== input.id) {
+          return triage;
+        }
+
+        return {
+          ...triage,
+          status: input.status,
+          notes: input.notes ?? triage.notes,
+          attendedBy: input.attendedBy ?? triage.attendedBy,
+          updatedAt: now,
+          attendedAt: input.status === 'IN_PROGRESS' && !triage.attendedAt ? now : triage.attendedAt
+        };
+      });
+      const updated = updatedTriages.find((triage) => triage.id === input.id);
+
+      if (!updated) {
+        throw new Error('Triagem nao encontrada.');
+      }
+
+      persistTriages(updatedTriages);
+      createNotification('TRIAGE_UPDATED', updated.id, { patientName: updated.patientName, status: updated.status });
+      return updated;
+    },
+
+    async listNotifications(unread?: boolean) {
+      const notifications = seedNotifications();
+      return unread ? notifications.filter((notification) => notification.status === 'UNREAD') : notifications;
+    },
+
+    async markNotificationAsRead(id: string) {
+      const notifications = seedNotifications();
+      const now = new Date().toISOString();
+      const nextNotifications = notifications.map((notification) =>
+        notification.id === id ? { ...notification, status: 'READ' as const, readAt: now } : notification
+      );
+      const updated = nextNotifications.find((notification) => notification.id === id);
+
+      if (!updated) {
+        throw new Error('Notificacao nao encontrada.');
+      }
+
+      persistNotifications(nextNotifications);
+      return updated;
     }
   };
 }

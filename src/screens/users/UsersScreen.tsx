@@ -76,7 +76,7 @@ export function UsersScreen() {
           <div className="grid gap-4">
             <div className="grid gap-2">
               <h3 className="text-xl font-black text-ink">Novo usuario</h3>
-              <p className="text-sm leading-6 text-cocoa">Essa tela entrega o requisito de criacao e listagem de perfis administrativos para a sprint 3-4.</p>
+              <p className="text-sm leading-6 text-cocoa">Crie contas com perfil definido para manter o acesso restrito por funcao.</p>
             </div>
 
             <Input label="Nome completo" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nome do usuario" />
@@ -114,9 +114,9 @@ export function UsersScreen() {
             <div className="flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
               <div>
                 <h3 className="text-xl font-black text-ink">Usuarios cadastrados</h3>
-                <p className="text-sm leading-6 text-cocoa">Lista persistida localmente no modo demo ou vinda da API real.</p>
+                <p className="text-sm leading-6 text-cocoa">Contas habilitadas para acessar os modulos administrativos e assistenciais.</p>
               </div>
-              <Badge label={apiClient.mode === 'mock' ? 'Mock' : 'HTTP'} tone={apiClient.mode === 'mock' ? 'soft' : 'success'} />
+              <Badge label="Controle de acesso" tone="success" />
             </div>
 
             {users.length === 0 ? (

@@ -8,10 +8,13 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { StatCard } from '../../components/ui/StatCard';
 
 const defaultSummary: DashboardSummary = {
-  usersCount: 3,
-  activePatients: 2,
+  usersCount: null,
+  activePatients: 0,
   inactivePatients: 0,
-  systemLoad: 'Carregando dados'
+  waitingTriages: 0,
+  inProgressTriages: 0,
+  unreadNotifications: 0,
+  systemLoad: 'Parcial'
 };
 
 export function DashboardScreen() {
@@ -33,20 +36,20 @@ export function DashboardScreen() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <StatCard label="Usuarios ativos" value={String(summary.usersCount)} note="Perfis cadastrados para as areas administrativa e clinica." />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Usuarios ativos" value={summary.usersCount === null ? 'Restrito' : String(summary.usersCount)} note="Perfis cadastrados para as areas administrativa e clinica." />
         <StatCard label="Pacientes ativos" value={String(summary.activePatients)} note="Registros disponiveis para consultas e acompanhamento." />
-        <StatCard label="Pacientes inativos" value={String(summary.inactivePatients)} note="Registros preservados para historico sem exclusao fisica." />
+        <StatCard label="Triagens aguardando" value={String(summary.waitingTriages)} note="Pacientes priorizados e aguardando atendimento." />
+        <StatCard label="Notificacoes abertas" value={String(summary.unreadNotifications)} note="Eventos operacionais ainda nao marcados como lidos." />
       </div>
 
       <Card>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="max-w-3xl gap-2">
-            <Badge label="Semana 1-2 / 3-4" tone="soft" />
-            <h2 className="text-2xl font-black text-ink">Base entregue para evolucao do HealthSys SaaS</h2>
+            <Badge label="Operacao assistencial" tone="soft" />
+            <h2 className="text-2xl font-black text-ink">Fluxo distribuido do HealthSys em operacao</h2>
             <p className="text-sm leading-6 text-cocoa">
-              O dashboard resume o escopo ja construido e valida que o front suporta administracao inicial, autenticacao e o cadastro de
-              pacientes com contrato pronto para o backend distribuido.
+              O painel consolida pacientes, triagens e eventos assincronos para apoiar a rotina de recepcao, administracao e equipe clinica.
             </p>
           </div>
 
@@ -60,24 +63,26 @@ export function DashboardScreen() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <div className="grid gap-3">
-            <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">Entregavel concluido</div>
-            <h3 className="text-xl font-black text-ink">Semana 1-2</h3>
+            <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">Pacientes</div>
+            <h3 className="text-xl font-black text-ink">Cadastro preservado e rastreavel</h3>
             <p className="text-sm leading-6 text-cocoa">
-              Estrutura da aplicacao, identidade visual, configuracao do ambiente web e camada de API pronta para uso local ou remoto.
+              Ha {summary.activePatients} pacientes ativos e {summary.inactivePatients} registros inativos mantidos para historico, sem
+              exclusao fisica.
             </p>
           </div>
         </Card>
 
         <Card>
           <div className="grid gap-3">
-            <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">Entregavel concluido</div>
-            <h3 className="text-xl font-black text-ink">Semana 3-4</h3>
+            <div className="text-xs font-bold uppercase tracking-[0.3em] text-clay">Triagem</div>
+            <h3 className="text-xl font-black text-ink">Prioridades em acompanhamento</h3>
             <p className="text-sm leading-6 text-cocoa">
-              Fluxos de login, cadastro de usuarios, cadastro/edicao de pacientes e listagem prontos para consumo por backend real.
+              Existem {summary.waitingTriages} triagens aguardando e {summary.inProgressTriages} em atendimento. Use o modulo de triagem
+              para atualizar o andamento clinico.
             </p>
             <EmptyState
-              title="Proxima evolucao natural"
-              description="Quando o backend distribuido estiver disponivel, basta apontar `VITE_API_BASE_URL` para consumir os endpoints reais sem mudar a UI."
+              title="Comunicacao operacional"
+              description="As notificacoes refletem eventos recebidos da comunicacao assincrona entre os servicos."
             />
           </div>
         </Card>

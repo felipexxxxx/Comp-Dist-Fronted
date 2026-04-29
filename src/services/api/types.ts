@@ -2,11 +2,20 @@ export type UserRole = 'ADMIN' | 'RECEPTIONIST' | 'HEALTH_PROFESSIONAL';
 
 export type PatientSex = 'FEMALE' | 'MALE' | 'OTHER';
 
+export type TriagePriority = 'EMERGENCY' | 'VERY_URGENT' | 'URGENT' | 'LESS_URGENT' | 'NON_URGENT';
+
+export type TriageStatus = 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export type NotificationStatus = 'UNREAD' | 'READ';
+
 export type DashboardSummary = {
-  usersCount: number;
+  usersCount: number | null;
   activePatients: number;
   inactivePatients: number;
-  systemLoad: string;
+  waitingTriages: number;
+  inProgressTriages: number;
+  unreadNotifications: number;
+  systemLoad: 'Online' | 'Parcial' | 'Indisponivel';
 };
 
 export type AuthSession = {
@@ -35,6 +44,31 @@ export type PatientRecord = {
   createdAt: string;
 };
 
+export type TriageRecord = {
+  id: string;
+  patientId: string;
+  patientName: string;
+  priority: TriagePriority;
+  status: TriageStatus;
+  chiefComplaint: string;
+  notes?: string | null;
+  attendedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  attendedAt?: string | null;
+};
+
+export type NotificationRecord = {
+  id: string;
+  eventType: string;
+  resourceId?: string | null;
+  routingKey: string;
+  payload: string;
+  status: NotificationStatus;
+  occurredAt: string;
+  readAt?: string | null;
+};
+
 export type CreateUserInput = {
   name: string;
   email: string;
@@ -54,6 +88,21 @@ export type UpdatePatientInput = CreatePatientInput & {
   active: boolean;
 };
 
+export type CreateTriageInput = {
+  patientId: string;
+  patientName: string;
+  priority: TriagePriority;
+  chiefComplaint: string;
+  notes?: string;
+};
+
+export type UpdateTriageStatusInput = {
+  id: string;
+  status: TriageStatus;
+  notes?: string;
+  attendedBy?: string;
+};
+
 export type LoginInput = {
   email: string;
   password: string;
@@ -70,4 +119,9 @@ export type HealthSysApi = {
   listPatients(): Promise<PatientRecord[]>;
   createPatient(input: CreatePatientInput): Promise<PatientRecord>;
   updatePatient(input: UpdatePatientInput): Promise<PatientRecord>;
+  listTriages(): Promise<TriageRecord[]>;
+  createTriage(input: CreateTriageInput): Promise<TriageRecord>;
+  updateTriageStatus(input: UpdateTriageStatusInput): Promise<TriageRecord>;
+  listNotifications(unread?: boolean): Promise<NotificationRecord[]>;
+  markNotificationAsRead(id: string): Promise<NotificationRecord>;
 };
